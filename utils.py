@@ -24,9 +24,8 @@ def prepare_data(dataset_name, size, gray_to_RGB=False):
 
     else :
         for image in input_list :
-
             trainA.append(misc.imresize(misc.imread(image, mode='RGB'), [size, size]))
-            
+
         for image in target_list :
             trainB.append(misc.imresize(misc.imread(image, mode='RGB'), [size, size]))
 
@@ -81,3 +80,24 @@ def inverse_transform(images):
 
 def imsave(images, size, path):
     return misc.imsave(path, merge(images, size))
+
+def merge(images, size):
+    h, w = images.shape[1], images.shape[2]
+    img = np.zeros((h * size[0], w * size[1], 3))
+    for idx, image in enumerate(images):
+        i = idx % size[1]
+        j = idx // size[1]
+        img[h*j:h*(j+1), w*i:w*(i+1), :] = image
+
+    return img
+
+def show_all_variables():
+    model_vars = tf.trainable_variables()
+    slim.model_analyzer.analyze_vars(model_vars, print_info=True)
+
+def check_folder(log_dir):
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    return log_dir
+
+
