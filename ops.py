@@ -37,7 +37,66 @@ def resblock(x_init, channels,  scope='resblock_0'):
 
         return x + x_init
 
-    
+    # def batch_norm(x, training, name):
+    #     training = tf.cast(training, tf.bool)
+    #     with tf.variable_scope(name):
+    #         x = tf.cond(training,
+    #                     lambda: slim.batch_norm(x, decay=0.997, epsilon=1e-5, scale=True, is_training=training,
+    #                                             scope=name + '_batch_norm', reuse=None),
+    #                     lambda: slim.batch_norm(x, decay=0.997, epsilon=1e-5, scale=True, is_training=training,
+    #                                             scope=name + '_batch_norm', reuse=True))
+    #     return x
+    #
+    # def conv_layer(x, training, filters, name):
+    #     batch_norm_params = {
+    #         'decay': 0.997,
+    #         'epsilon': 1e-5,
+    #         'scale': True,
+    #         'is_training': training
+    #     }
+    #     with tf.variable_scope(name):
+    #         with slim.arg_scope([slim.conv2d],
+    #                             activation_fn=tf.nn.relu,
+    #                             normalizer_fn=slim.batch_norm,
+    #                             normalizer_params=batch_norm_params,
+    #                             weights_regularizer=slim.l2_regularizer(1e-5)):
+    #             x = slim.conv2d(x, filters, kernel_size=3, stride=1, padding='SAME', activation_fn=tf.nn.relu,
+    #                             scope=name + '_conv3x3')
+    #             # x = slim.dropout(x, keep_prob=0.2, is_training=training, scope=name+'_dropout')
+    #     return x
+    #
+    # def dense_block(x, training, block_nb, name):
+    #     dense_out = []
+    #     with tf.variable_scope(name):
+    #         for i in range(layers_per_block[block_nb]):
+    #             conv = conv_layer(x, training, growth_k, name=name + '_layer_' + str(i))
+    #             x = tf.concat([conv, x], axis=3)
+    #             dense_out.append(conv)
+    #         x = tf.concat(dense_out, axis=3)
+    #     return x
+    #
+    # def transition_down(x, training, filters, name):
+    #     batch_norm_params = {
+    #         'decay': 0.997,
+    #         'epsilon': 1e-5,
+    #         'scale': True,
+    #         'is_training': training
+    #     }
+    #     with tf.variable_scope(name):
+    #         x = slim.conv2d(x, filters, kernel_size=1, stride=1, padding='SAME', normalizer_fn=slim.batch_norm,
+    #                         normalizer_params=batch_norm_params,
+    #                         weights_regularizer=slim.l2_regularizer(1e-5), activation_fn=tf.nn.relu,
+    #                         scope=name + '_conv1x1')
+    #         x = slim.dropout(x, keep_prob=0.2, is_training=training, scope=name + '_dropout')
+    #         x = slim.max_pool2d(x, kernel_size=4, stride=2, padding='SAME', scope=name + '_maxpool2x2')
+    #     return x
+    #
+    # def transition_up(x, filters, name):
+    #     with tf.variable_scope(name):
+    #         x = slim.conv2d_transpose(x, filters, kernel_size=3, stride=2,
+    #                                   padding='SAME', activation_fn=tf.nn.relu, scope=name + '_trans_conv3x3')
+    #     return x
+    #
 def flatten(x) :
     return tf.layers.flatten(x)
 
