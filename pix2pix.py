@@ -7,6 +7,7 @@ class pix2pix(object):
     def __init__(self, sess, args):
         self.model_name = 'pix2pix'
         self.sess = sess
+        self.lambda1 = args.lambda1
         self.checkpoint_dir = args.checkpoint_dir
         self.result_dir = args.result_dir
         self.log_dir = args.log_dir
@@ -106,21 +107,25 @@ class pix2pix(object):
         self.fake_B = self.generator(self.real_A)
         D_fake_logit = self.discriminator(self.fake_B, reuse=True)
 
-        self.d_loss = discriminator_loss(real=D_real_logit, fake=D_fake_logit)
+        self.wgan_d_loss = discriminator_loss(real=D_real_logit, fake=D_fake_logit)
 
         self.g_loss = generator_loss(fake=D_fake_logit) + self.L1_weight * L1_loss(self.real_B, self.fake_B)
+
 
         """ Training """
         t_vars = tf.trainable_variables()
         G_vars = [var for var in t_vars if 'generator' in var.name]
         D_vars = [var for var in t_vars if 'discriminator' in var.name]
 
+        self.gp_loss = self.gradient_penalty()
+        self.d_loss = self.wgan_d_loss + self.lambda1 * self.gp_loss
+
         self.G_optim = tf.train.RMSPropOptimizer(learning_rate=self.lr).minimize(self.g_loss,var_list=G_vars)
         self.D_optim = tf.train.RMSPropOptimizer(learning_rate=self.lr).minimize(self.d_loss,var_list=D_vars)
 
         # self.G_optim = tf.train.AdamOptimizer(self.lr, beta1=0.5, beta2=0.999).minimize(self.g_loss, var_list=G_vars)
         # self.D_optim = tf.train.AdamOptimizer(self.lr, beta1=0.5, beta2=0.999).minimize(self.d_loss, var_list=D_vars)
-        self.clip_D = [var.assign(tf.clip_by_value(var, -0.01, 0.01)) for var in t_vars if 'discriminator' in var.name]
+        # self.clip_D = [var.assign(tf.clip_by_value(var, -0.01, 0.01)) for var in t_vars if 'discriminator' in var.name]
 
         """" Summary """
         self.G_loss_summary = tf.summary.scalar("Generator_loss", self.g_loss)
@@ -170,7 +175,7 @@ class pix2pix(object):
                 }
 
                 # Update D
-                self.sess.run(self.clip_D)
+                # self.sess.run(self.clip_D)
                 _, d_loss, summary_str = self.sess.run([self.D_optim, self.d_loss, self.D_loss_summary],
                                                        feed_dict=train_feed_dict)
                 self.writer.add_summary(summary_str, counter)
@@ -204,6 +209,15 @@ class pix2pix(object):
                 # save model for final step
             self.save(self.checkpoint_dir, counter)
 
+    def gradient_penalty(self):
+        alpha = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], minval=0., maxval=1.)
+        differences = self.fake_B - self.real_B
+        interpolates = self.real_B + (alpha * differences)
+        gradients = tf.gradients(self.discriminator(interpolates, reuse=True), [interpolates])[0]
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1, 2, 3]))
+        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
+
+        return gradient_penalty
 
     @property
     def model_dir(self):
@@ -221,9 +235,8 @@ class pix2pix(object):
         import re
         print(" [*] Reading checkpoints...")
         checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir)
-        # print(checkpoint_dir)
+
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        # print(ckpt)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
             self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
@@ -233,38 +246,3 @@ class pix2pix(object):
         else:
             print(" [*] Failed to find a checkpoint")
             return False, 0
-
-    def test(self):
-        tf.global_variables_initializer().run()
-        test_A_files = glob('./16/*.*')
-
-        self.saver = tf.train.Saver()
-        could_load, checkpoint_counter = self.load(self.checkpoint_dir)
-
-        if could_load :
-            print(" [*] Load SUCCESS")
-        else :
-            print(" [!] Load failed...")
-
-        # write html for visual comparison
-        index_path = os.path.join(self.result_dir, 'index.html')
-        index = open(index_path, 'w')
-        index.write("<html><body><table><tr>")
-        index.write("<th>name</th><th>input</th><th>output</th></tr>")
-
-        for sample_file  in test_A_files : # A -> B
-            print('Processing A image: ' + sample_file)
-            sample_image = np.asarray(load_test_data(sample_file, size=self.img_size, gray_to_RGB=self.gray_to_RGB))
-            image_path = os.path.join(self.result_dir,'{0}'.format(os.path.basename(sample_file)))
-
-            fake_img = self.sess.run(self.sample, feed_dict = {self.test_real_A : sample_image})
-
-            save_images(fake_img, [1, 1], image_path)
-            index.write("<td>%s</td>" % os.path.basename(image_path))
-            index.write("<td><img src='%s' width='%d' height='%d'></td>" % (sample_file if os.path.isabs(sample_file) else (
-                '..' + os.path.sep + sample_file), self.img_size, self.img_size))
-            index.write("<td><img src='%s' width='%d' height='%d'></td>" % (image_path if os.path.isabs(image_path) else (
-                '..' + os.path.sep + image_path), self.img_size, self.img_size))
-            index.write("</tr>")
-
-        index.close()
