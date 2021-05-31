@@ -3,7 +3,7 @@ import argparse
 from utils import *
 import tensorflow as tf
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 """parsing and configuration"""
 def parse_args():
@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.0002, help='The learning rate')
     parser.add_argument('--L1_weight', type=float, default=10.0, help='The L1 lambda')
 
+    parser.add_argument('--lambda1', type=float, default=10.,help='gradient penalty lambda hyperparameter, default: 10.')
 
     parser.add_argument('--ch', type=int, default=64, help='base channel number per layer')
     parser.add_argument('--repeat', type=int, default=9, help='img size : 256 -> 9, 128 -> 6')
@@ -26,13 +27,13 @@ def parse_args():
     parser.add_argument('--img_size', type=int, default=256, help='The size of image')
     parser.add_argument('--gray_to_RGB', type=bool, default=False, help='Gray -> RGB')
 
-    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoint1/',
+    parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',
                         help='Directory name to save the checkpoints')
-    parser.add_argument('--result_dir', type=str, default='E-result',
+    parser.add_argument('--result_dir', type=str, default='result',
                         help='Directory name to save the generated images')
-    parser.add_argument('--log_dir', type=str, default='logs',
+    parser.add_argument('--log_dir', type=str, default='logs-no-clip',
                         help='Directory name to save training logs')
-    parser.add_argument('--sample_dir', type=str, default='samples',
+    parser.add_argument('--sample_dir', type=str, default='samples-no-clip',
                         help='Directory name to save the samples on training')
 
     return check_args(parser.parse_args())
@@ -92,3 +93,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
